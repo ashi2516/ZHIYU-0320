@@ -1,0 +1,38 @@
+{
+  "provider": {
+    "activeProvider": "openai",
+    "providers": [
+      {
+        "providerType": "openai",
+        "baseUrl": "https://api.openai.com/v1",
+        "model": "gpt-4o-2024-11-20",
+        "enabled": true
+      },
+      {
+        "providerType": "deepseek",
+        "baseUrl": "https://api.deepseek.com/v1",
+        "model": "deepseek-chat",
+        "enabled": true
+      }
+    ]
+  },
+  "modelTuning": {
+    "temperature": 0.8,
+    "maxTokens": 1024
+  },
+  "prompt": {
+    "systemPrompt": "",
+    "persona": ""
+  },
+  "memory": {
+    "coreMemory": "",
+    "longTermSummary": "",
+    "longTermEnabled": false
+  },
+  "theme": {
+    "mode": "dark"
+  },
+  "ui": {
+    "mobileSettingsOpen": false
+  }
+}
