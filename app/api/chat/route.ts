@@ -15,6 +15,20 @@ function createId() {
 }
 
 export async function POST(request: Request) {
+  const requestId = `chat_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+  let activeProvider = 'unknown';
+  let providerBaseUrl = 'unknown';
+  let providerModel = 'unknown';
+  let logPreview: {
+    userInputLength?: number;
+    contextMessageCount?: number;
+    loreHitCount?: number;
+    temperature?: number;
+    maxTokens?: number;
+    hasApiKey?: boolean;
+  } = {};
+
   try {
     const body = (await request.json()) as { message: string };
     const userInput = body.message?.trim();
@@ -29,7 +43,7 @@ export async function POST(request: Request) {
       getLorebook(),
     ]);
 
-    const activeProvider = settings.provider.activeProvider;
+    activeProvider = settings.provider.activeProvider;
     const providerConfig = settings.provider.providers.find(
       (item) => item.providerType === activeProvider,
     );
@@ -37,6 +51,9 @@ export async function POST(request: Request) {
     if (!providerConfig) {
       return NextResponse.json({ error: `未找到 provider: ${activeProvider}` }, { status: 400 });
     }
+
+    providerBaseUrl = providerConfig.baseUrl;
+    providerModel = providerConfig.model;
 
     const apiKey = await getProviderSecret(activeProvider);
     if (!apiKey) {
@@ -59,6 +76,15 @@ export async function POST(request: Request) {
 
     const hits = matchLorebookEntries(userInput, lorebook);
     const contextMessages = buildContextMessages(settings, nextSession, hits);
+
+    logPreview = {
+      userInputLength: userInput.length,
+      contextMessageCount: contextMessages.length,
+      loreHitCount: hits.length,
+      temperature: settings.modelTuning.temperature,
+      maxTokens: settings.modelTuning.maxTokens,
+      hasApiKey: Boolean(apiKey),
+    };
 
     const assistantReply = await requestChatCompletion({
       apiKey,
@@ -90,7 +116,22 @@ export async function POST(request: Request) {
       provider: activeProvider,
     });
   } catch (error) {
+    console.error('[api/chat] provider request failed', {
+      requestId,
+      activeProvider,
+      baseUrl: providerBaseUrl,
+      model: providerModel,
+      requestPreview: logPreview,
+      error,
+    });
+
     const message = error instanceof Error ? error.message : '未知错误';
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json(
+      {
+        error: `聊天请求失败：provider=${activeProvider}, model=${providerModel}, baseUrl=${providerBaseUrl}, detail=${message}`,
+        requestId,
+      },
+      { status: 500 },
+    );
   }
 }
